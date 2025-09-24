@@ -1,0 +1,55 @@
+local lp = game:GetService("Players").LocalPlayer
+local rs = game:GetService("ReplicatedStorage")
+local uis = game:GetService("UserInputService")
+local chars = workspace:WaitForChild("Characters")
+
+local button = script.Parent  -- The TextButton this script is in
+
+local enabled = false
+local range = 150
+local count = 0
+
+-- Change button text to reflect current state
+local function updateButtonText()
+	button.Text = enabled and "Auto-Damage: ON" or "Auto-Damage: OFF"
+end
+
+-- Get Katana tool
+local function getTool()
+	return lp:WaitForChild("Inventory"):FindFirstChild("Katana")
+end
+
+-- Send damage request to server
+local function damage(t, tool)
+	if not tool then return end
+	local evt = rs:FindFirstChild("RemoteEvents") and rs.RemoteEvents:FindFirstChild("ToolDamageObject")
+	if not evt then return end
+	evt:InvokeServer(t, tool, tostring(count).."_7367831688", t:FindFirstChild("HumanoidRootPart") and t.HumanoidRootPart.CFrame or CFrame.new())
+end
+
+-- Toggle when button is clicked
+button.MouseButton1Click:Connect(function()
+	enabled = not enabled
+	updateButtonText()
+end)
+
+-- Auto-damage loop
+task.spawn(function()
+	while true do
+		task.wait()
+		if not enabled then continue end
+
+		local tool = getTool()
+		if not tool or not lp.Character or not lp.Character:FindFirstChild("HumanoidRootPart") then continue end
+
+		for _, v in ipairs(chars:GetChildren()) do
+			if v:IsA("Model") and v:FindFirstChild("HumanoidRootPart") and v ~= lp.Character then
+				local d = (v.HumanoidRootPart.Position - lp.Character.HumanoidRootPart.Position).Magnitude
+				if d <= range then
+					count += 1
+					damage(v, tool)
+				end
+			end
+		end
+	end
+end)
